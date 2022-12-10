@@ -15,13 +15,19 @@ group by actor_id
 having count(film_id) > 1;
 
 -- 2. Create a CTE with the code above
-with cte_actor_multiple_movies as (
-	select actor_id, count(film_id)
-	from film_actor
-	group by actor_id
-	having count(film_id) > 1
-) 
-select fa.film_id, cte.actor_id from film_actor fa
-join cte_actor_multiple_movies cte
-on fa.actor_id = cte.actor_id;
+with cte as (
+	select actor_id, count(film_id) as total_movies
+    from film_actor
+    group by actor_id
+    order by actor_id
+),
+cte2 as (
+	select film_id, actor_id, total_movies,
+    row_number() over (partition by film_id order by total_movies desc) as flag
+    from cte
+    join film_actor using (actor_id)
+    order by film_id asc, total_movies desc
+)
+select film_id, actor_id from cte2
+where flag = 1;
 
